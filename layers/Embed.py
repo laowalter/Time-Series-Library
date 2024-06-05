@@ -13,8 +13,8 @@ class PositionalEmbedding(nn.Module):
         pe.require_grad = False
 
         position = torch.arange(0, max_len).float().unsqueeze(1)
-        div_term = (torch.arange(0, d_model, 2).float()
-                    * -(math.log(10000.0) / d_model)).exp()
+        div_term = (torch.arange(0, d_model, 2).float() *
+                    -(math.log(10000.0) / d_model)).exp()
 
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
@@ -31,7 +31,8 @@ class TokenEmbedding(nn.Module):
         super(TokenEmbedding, self).__init__()
         padding = 1 if torch.__version__ >= '1.5.0' else 2
         self.tokenConv = nn.Conv1d(in_channels=c_in, out_channels=d_model,
-                                   kernel_size=3, padding=padding, padding_mode='circular', bias=False)
+                                   kernel_size=3, padding=padding,
+                                   padding_mode='circular', bias=False)
         for m in self.modules():
             if isinstance(m, nn.Conv1d):
                 nn.init.kaiming_normal_(
@@ -50,8 +51,8 @@ class FixedEmbedding(nn.Module):
         w.require_grad = False
 
         position = torch.arange(0, c_in).float().unsqueeze(1)
-        div_term = (torch.arange(0, d_model, 2).float()
-                    * -(math.log(10000.0) / d_model)).exp()
+        div_term = (torch.arange(0, d_model, 2).float() *
+                    -(math.log(10000.0) / d_model)).exp()
 
         w[:, 0::2] = torch.sin(position * div_term)
         w[:, 1::2] = torch.cos(position * div_term)
@@ -82,6 +83,7 @@ class TemporalEmbedding(nn.Module):
         self.month_embed = Embed(month_size, d_model)
 
     def forward(self, x):
+        import ipdb; ipdb.set_trace()
         x = x.long()
         minute_x = self.minute_embed(x[:, :, 4]) if hasattr(
             self, 'minute_embed') else 0.
@@ -188,3 +190,20 @@ class PatchEmbedding(nn.Module):
         # Input encoding
         x = self.value_embedding(x) + self.position_embedding(x)
         return self.dropout(x), n_vars
+
+
+# walter add to test
+if __name__ == "__main__":
+    time_data = torch.tensor([
+        [2023, 11, 19, 10, 15],  # Year, Month, Day, Hour, Minute (adjust values as needed)
+        [2024, 1, 2, 12, 30],
+        [2023, 12, 25, 17, 45],
+    ])
+
+    d_model = 128  # Embedding dimension
+    embed_type = 'fixed'  # Or 'timeF'
+    freq = 'h'
+
+    temporal_embedding = TemporalEmbedding(d_model, embed_type=embed_type, freq=freq)
+    temporal_embeddings = temporal_embedding(time_data)
+    print(temporal_embeddings)

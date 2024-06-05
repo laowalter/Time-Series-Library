@@ -129,7 +129,7 @@ class M4Meta:
     }  # from interpretable.gin
 
 
-def load_m4_info() -> pd.DataFrame:
+def load_m4_info(INFO_FILE_PATH) -> pd.DataFrame:
     """
     Load M4Info file.
 

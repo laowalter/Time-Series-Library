@@ -71,6 +71,7 @@ class Exp_Short_Term_Forecast(Exp_Basic):
             iter_count = 0
             train_loss = []
 
+            # set a train mode.
             self.model.train()
             epoch_time = time.time()
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):

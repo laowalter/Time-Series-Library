@@ -236,8 +236,8 @@ class Dataset_Custom(Dataset):
 
     def __read_data__(self):
         self.scaler = StandardScaler()
-        df_raw = pd.read_csv(os.path.join(self.root_path,
-                                          self.data_path))
+        df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+        import ipdb; ipdb.set_trace()
 
         '''
         df_raw.columns: ['date', ...(other features), target feature]
@@ -249,6 +249,11 @@ class Dataset_Custom(Dataset):
         num_train = int(len(df_raw) * 0.7)
         num_test = int(len(df_raw) * 0.2)
         num_vali = len(df_raw) - num_train - num_test
+
+        '''
+        border1s [训练集的起始位置，验证集的起始位置,测试集的起始位置]
+        border1s [训练集的结束位置，验证集的结束位置,测试集的结束位置]
+        '''
         border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
         border2s = [num_train, num_train + num_vali, len(df_raw)]
         border1 = border1s[self.set_type]

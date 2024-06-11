@@ -4,6 +4,8 @@ import torch.nn as nn
 
 class Inception_Block_V1(nn.Module):
     def __init__(self, in_channels, out_channels, num_kernels=6, init_weight=True):
+        import ipdb; ipdb.set_trace()
+
         super(Inception_Block_V1, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -58,3 +60,10 @@ class Inception_Block_V2(nn.Module):
             res_list.append(self.kernels[i](x))
         res = torch.stack(res_list, dim=-1).mean(-1)
         return res
+
+
+if __name__ == "__main__":
+    v1 = Inception_Block_V1(in_channels=32, out_channels=32, num_kernels=6, init_weight=True)
+    v2 = Inception_Block_V2(in_channels=32, out_channels=32, num_kernels=6, init_weight=True)
+    print(v1)
+    print(v2)

@@ -83,7 +83,6 @@ class TemporalEmbedding(nn.Module):
         self.month_embed = Embed(month_size, d_model)
 
     def forward(self, x):
-        import ipdb; ipdb.set_trace()
         x = x.long()
         minute_x = self.minute_embed(x[:, :, 4]) if hasattr(
             self, 'minute_embed') else 0.
@@ -123,8 +122,11 @@ class DataEmbedding(nn.Module):
         if x_mark is None:
             x = self.value_embedding(x) + self.position_embedding(x)
         else:
-            x = self.value_embedding(
-                x) + self.temporal_embedding(x_mark) + self.position_embedding(x)
+            '''
+            x is data, x_mark is date
+            '''
+            x = self.value_embedding(x) + self.temporal_embedding(x_mark) \
+                + self.position_embedding(x)
         return self.dropout(x)
 
 

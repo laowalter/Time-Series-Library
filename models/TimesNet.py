@@ -7,14 +7,30 @@ from layers.Conv_Blocks import Inception_Block_V1
 
 
 def FFT_for_Period(x, k=2):
+    r'''
+    - x 形状为[16,192,32]
+    - xf 是快速傅里叶变换的结果，形状为 [B, T//2+1, C] 本例中[16,97,32]
+    - abs(xf) 计算每个复数的幅值（模），得到的结果形状仍为 [B, T//2+1, C]
+    - mean(0) 沿着批量维度（B）计算平均值，得到形状为 [T//2+1, C] 的张量,
+      目的是在所有样本中对每个时间步和通道的幅值进行平均，以消除批量之间的差异。
+    - mean(-1) 沿着最后一个维度（C，即通道数）计算平均值，得到形状为 [T//2+1] 的张量。
+      这一步的目的是在所有通道中对每个频率的幅值进行平均，以简化计算和分析。
+    '''
+    import ipdb; ipdb.set_trace()
     # [B, T, C]
     xf = torch.fft.rfft(x, dim=1)
     # find period by amplitudes
     frequency_list = abs(xf).mean(0).mean(-1)
+
+    '''
+    在快速傅里叶变换（FFT）的结果中，零频率分量表示信号的直流分量或平均值。
+    将 frequency_list[0] 设为 0，可以确保零频率分量在后续的排序和选择中不会被
+    误认为是重要的周期成分。
+    '''
     frequency_list[0] = 0
     _, top_list = torch.topk(frequency_list, k)
-    top_list = top_list.detach().cpu().numpy()
-    period = x.shape[1] // top_list
+    top_list = top_list.detach().cpu().numpy()  # for exp [51,78,39, 42, 1] 幅度最高的频率分量
+    period = x.shape[1] // top_list  # 最显著的k个周期 = 总步长 / 幅度最高的频率
     return period, abs(xf).mean(-1)[:, top_list]
 
 
@@ -34,6 +50,7 @@ class TimesBlock(nn.Module):
         )
 
     def forward(self, x):
+        import ipdb; ipdb.set_trace()
         B, T, N = x.size()
         period_list, period_weight = FFT_for_Period(x, self.k)
 
@@ -101,6 +118,7 @@ class Model(nn.Module):
                 configs.d_model * configs.seq_len, configs.num_class)
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
+        import ipdb; ipdb.set_trace()
         # Normalization from Non-stationary Transformer
         means = x_enc.mean(1, keepdim=True).detach()
         x_enc = x_enc - means
@@ -110,8 +128,7 @@ class Model(nn.Module):
 
         # embedding
         enc_out = self.enc_embedding(x_enc, x_mark_enc)  # [B,T,C]
-        enc_out = self.predict_linear(enc_out.permute(0, 2, 1)).permute(
-            0, 2, 1)  # align temporal dimension
+        enc_out = self.predict_linear(enc_out.permute(0, 2, 1)).permute(0, 2, 1)  # align temporal dimension
 
         # TimesNet
         for i in range(self.layer):

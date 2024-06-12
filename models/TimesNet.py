@@ -16,7 +16,6 @@ def FFT_for_Period(x, k=2):
     - mean(-1) 沿着最后一个维度（C，即通道数）计算平均值，得到形状为 [T//2+1] 的张量。
       这一步的目的是在所有通道中对每个频率的幅值进行平均，以简化计算和分析。
     '''
-    import ipdb; ipdb.set_trace()
     # [B, T, C]
     xf = torch.fft.rfft(x, dim=1)
     # find period by amplitudes
@@ -42,16 +41,16 @@ class TimesBlock(nn.Module):
         self.k = configs.top_k
         # parameter-efficient design
         self.conv = nn.Sequential(
-            Inception_Block_V1(configs.d_model, configs.d_ff,
-                               num_kernels=configs.num_kernels),
+            Inception_Block_V1(configs.d_model, configs.d_ff, num_kernels=configs.num_kernels),
             nn.GELU(),
-            Inception_Block_V1(configs.d_ff, configs.d_model,
-                               num_kernels=configs.num_kernels)
+            Inception_Block_V1(configs.d_ff, configs.d_model, num_kernels=configs.num_kernels)
         )
 
     def forward(self, x):
-        import ipdb; ipdb.set_trace()
         B, T, N = x.size()
+
+        # period_list array([3,2,4,4,192])
+        # period_weight shape ([16,5])
         period_list, period_weight = FFT_for_Period(x, self.k)
 
         res = []
@@ -61,24 +60,35 @@ class TimesBlock(nn.Module):
             if (self.seq_len + self.pred_len) % period != 0:
                 length = (
                     ((self.seq_len + self.pred_len) // period) + 1) * period
-                padding = torch.zeros([x.shape[0], (length - (self.seq_len + self.pred_len)), x.shape[2]]).to(x.device)
+                padding = torch.zeros([x.shape[0],
+                                       (length - (self.seq_len + self.pred_len)),
+                                       x.shape[2]]).to(x.device)
                 out = torch.cat([x, padding], dim=1)
             else:
                 length = (self.seq_len + self.pred_len)
                 out = x
-            # reshape
+
+            '''
+            - 二维卷积（2D Conv），输入数据的格式通常是[batch_size, channels, height, width];
+            - length // period 把数据分成4段，就是4个通道;
+            - 先整形成conv2d需要的数据格式，算出结果之后，在恢复回来;
+            '''
+            # out.shape ([16,192,32])
+            # out.(B, length//period, period, N) => (16, 192/3, Period=3, N=32)
+            # => (16, 64, 3, 32)
+            # permint(0,3,1,2) => (16, 32, 64, 3)
             out = out.reshape(B, length // period, period,
                               N).permute(0, 3, 1, 2).contiguous()
             # 2D conv: from 1d Variation to 2d Variation
-            out = self.conv(out)
+            out = self.conv(out)  # (16,32,64,3) = B,N,C,T
             # reshape back
-            out = out.permute(0, 2, 3, 1).reshape(B, -1, N)
-            res.append(out[:, :(self.seq_len + self.pred_len), :])
-        res = torch.stack(res, dim=-1)
+            out = out.permute(0, 2, 3, 1).reshape(B, -1, N)  # (16,64*3=192,32) =>B,C,T,N
+            res.append(out[:, :(self.seq_len + self.pred_len), :])  # list of (16,192,32)
+
+        res = torch.stack(res, dim=-1)  # [16,192,32,5]
         # adaptive aggregation
         period_weight = F.softmax(period_weight, dim=1)
-        period_weight = period_weight.unsqueeze(
-            1).unsqueeze(1).repeat(1, T, N, 1)
+        period_weight = period_weight.unsqueeze(1).unsqueeze(1).repeat(1, T, N, 1)  # torch.Size([16, 192, 32, 5])
         res = torch.sum(res * period_weight, -1)
         # residual connection
         res = res + x
@@ -118,22 +128,24 @@ class Model(nn.Module):
                 configs.d_model * configs.seq_len, configs.num_class)
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
-        import ipdb; ipdb.set_trace()
         # Normalization from Non-stationary Transformer
         means = x_enc.mean(1, keepdim=True).detach()
         x_enc = x_enc - means
-        stdev = torch.sqrt(
-            torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
+        stdev = torch.sqrt(torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
         x_enc /= stdev
 
-        # embedding
+        # Embedding
         enc_out = self.enc_embedding(x_enc, x_mark_enc)  # [B,T,C]
         enc_out = self.predict_linear(enc_out.permute(0, 2, 1)).permute(0, 2, 1)  # align temporal dimension
 
         # TimesNet
         for i in range(self.layer):
+            '''
+            在这里是用了model计算
+            '''
             enc_out = self.layer_norm(self.model[i](enc_out))
-        # porject back
+
+        # Project back
         dec_out = self.projection(enc_out)
 
         # De-Normalization from Non-stationary Transformer

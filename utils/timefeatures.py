@@ -125,6 +125,9 @@ def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
 
     for offset_type, feature_classes in features_by_offsets.items():
         if isinstance(offset, offset_type):
+            '''
+            <hour> example, will return [HourOfDay(), DayOfWeek(), DayOfMonth(), DayOfYear()]
+            '''
             return [cls() for cls in feature_classes]
 
     supported_freq_msg = f"""
@@ -145,4 +148,7 @@ def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
 
 
 def time_features(dates, freq='h'):
+    # hour example, time_features_from_frequency_str(freq)
+    # is  [HourOfDay(), DayOfWeek(), DayOfMonth(), DayOfYear()]
+    # return the shape is (4, dates length), the 4 is above Hour, Week, Month and Year
     return np.vstack([feat(dates) for feat in time_features_from_frequency_str(freq)])

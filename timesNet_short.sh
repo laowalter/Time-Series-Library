@@ -2,14 +2,15 @@
 
 model_name=TimesNet
 
-./run.py  \
+export CUDA_VISIBLE_DEVICES=0
+
+./run.py \
   --task_name short_term_forecast \
   --is_training 1 \
   --root_path ./dataset/m4 \
   --seasonal_patterns 'Quarterly' \
   --model_id m4_Quarterly \
-  --model $model_name\
-  --data m4 \
+  --model $model_name --data m4 \
   --features M \
   --e_layers 2 \
   --d_layers 1 \

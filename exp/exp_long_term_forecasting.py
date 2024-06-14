@@ -27,7 +27,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         return model
 
     def _get_data(self, flag):
-        data_set, data_loader = data_provider(self.args, flag)
+        data_set, data_loader = data_provider(self.args, flag)  # flag = train/val/test
         return data_set, data_loader
 
     def _select_optimizer(self):

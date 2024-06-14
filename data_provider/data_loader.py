@@ -47,7 +47,7 @@ class Dataset_ETT_hour(Dataset):
         self.__read_data__()
 
     def __read_data__(self):
-        self.scaler = StandardScaler()
+        self.scaler = StandardScaler()  # Choose Normalizer
         df_raw = pd.read_csv(os.path.join(self.root_path,
                                           self.data_path))
 
@@ -246,6 +246,7 @@ class Dataset_Custom(Dataset):
         cols.remove(self.target)
         cols.remove('date')
         df_raw = df_raw[['date'] + cols + [self.target]]
+
         num_train = int(len(df_raw) * 0.7)
         num_test = int(len(df_raw) * 0.2)
         num_vali = len(df_raw) - num_train - num_test
@@ -254,15 +255,20 @@ class Dataset_Custom(Dataset):
         border1s [训练集的起始位置，验证集的起始位置,测试集的起始位置]
         border1s [训练集的结束位置，验证集的结束位置,测试集的结束位置]
         '''
+        # 下面代码中 -self.seq_len 模型需要一个长度为 self.seq_len 的输入序列来进行预测。
+        # 如果验证集的起点是 num_train，那么第一个验证样本将无法获得完整的输入序列。
+        # 通过将验证集的起点设为 num_train - self.seq_len，确保了验证集中的第一个样本可
+        # 以有一个完整的输入序列。
         border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
         border2s = [num_train, num_train + num_vali, len(df_raw)]
-        border1 = border1s[self.set_type]
-        border2 = border2s[self.set_type]
+        border1 = border1s[self.set_type]  # line224, setup border1 to training start
+        border2 = border2s[self.set_type]  # setup border2 to training end
 
         if self.features == 'M' or self.features == 'MS':
-            cols_data = df_raw.columns[1:]
+            # M (多变量预测多变量) S (单变量预测单变量) MS (多变量预测单变量)
+            cols_data = df_raw.columns[1:]  # 去掉数据集中date的字段
             df_data = df_raw[cols_data]
-        elif self.features == 'S':
+        elif self.features == 'S':  # self.target=target='OT'
             df_data = df_raw[[self.target]]
 
         if self.scale:
@@ -272,6 +278,9 @@ class Dataset_Custom(Dataset):
         else:
             data = df_data.values
 
+        '''
+        处理时间
+        '''
         df_stamp = df_raw[['date']][border1:border2]
         df_stamp['date'] = pd.to_datetime(df_stamp.date)
         if self.timeenc == 0:
@@ -287,12 +296,18 @@ class Dataset_Custom(Dataset):
         self.data_x = data[border1:border2]
         self.data_y = data[border1:border2]
 
+        '''see run.py for explain augmentation_ratio'''
         if self.set_type == 0 and self.args.augmentation_ratio > 0:
             self.data_x, self.data_y, augmentation_tags = run_augmentation_single(self.data_x, self.data_y, self.args)
 
         self.data_stamp = data_stamp
 
+        # 最终得到的数据就是self.data_x,self.data_y, self_data_stamp
+        # 用来给__getitem__,
+        return
+
     def __getitem__(self, index):
+        '''作为一个dataset的子类需要iterate功能'''
         s_begin = index
         s_end = s_begin + self.seq_len
         r_begin = s_end - self.label_len

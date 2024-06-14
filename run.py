@@ -12,6 +12,30 @@ from utils.print_args import print_args
 import random
 import numpy as np
 
+'''
+scale: 出现在data_loader.py中
+    标准化（Standardization）：将数据转换为均值为0、标准差为1的分布。常用的方法是减去均值并除以标准差。
+    归一化（Normalization）：将数据缩放到一个特定的范围（通常是[0, 1]或[-1, 1]）。
+
+    启用或禁用数据标准化/归一化：
+        当 scale=True 时，数据将在读取后进行标准化或归一化处理。
+        当 scale=False 时，数据将保持原始状态，不进行标准化或归一化处理。
+
+features 'M'
+    M (多变量预测多变量)：是指使用多个变量来预测多个变量的结果。例如，您可能有多个股票的价格数据，并想要同时预测它们未来的价格走势。
+    S (单变量预测单变量)：是指仅使用一个变量来预测该变量本身未来的值。例如，您可能只有某只股票的价格数据，并想要预测其未来的价格走势。
+    MS (多变量预测单变量)：是指使用多个变量来预测单个变量的结果。例如，您可能有多个影响因素（例如，温度、湿度等）和某只股票的价格数据，并想要利用这些影响因素来预测股票未来价格走势。
+
+augmentation_ratio
+    参数通常用于机器学习或数据处理脚本中，指定数据增强的倍数。数据增强是一种技术，通过对现有数据集进行各种变换（如翻转、旋转、缩放、平移、裁剪、颜色变换等），生成更多样本以增加数据集的多样性，从而提高模型的泛化能力。
+    类型: int
+    默认值: 0
+    说明: 指定对数据进行增强的倍数。
+    参数用法
+        --augmentation_ratio 0 表示不进行数据增强。
+        --augmentation_ratio 1 表示每个样本进行一次增强。
+        --augmentation_ratio N 表示每个样本进行 N 次增强。
+'''
 if __name__ == '__main__':
     fix_seed = 2021
     random.seed(fix_seed)
@@ -32,6 +56,7 @@ if __name__ == '__main__':
     parser.add_argument('--data', type=str, required=True, default='ETTm1', help='dataset type')
     parser.add_argument('--root_path', type=str, default='./data/ETT/', help='root path of the data file')
     parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='data file')
+
     parser.add_argument('--features', type=str, default='M',
                         help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
     parser.add_argument('--target', type=str, default='OT', help='target feature in S or MS task')

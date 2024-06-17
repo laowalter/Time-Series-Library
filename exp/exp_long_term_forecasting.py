@@ -118,7 +118,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
                 # encoder - decoder
-                if self.args.use_amp:
+                if self.args.use_amp:  # use automatic mixed precision training
                     with torch.cuda.amp.autocast():
                         if self.args.output_attention:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
@@ -134,8 +134,9 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     if self.args.output_attention:
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                     else:
+                        import ipdb; ipdb.set_trace()
                         '''
-                        从这里继续研究model的内容
+                        进入模型计算
                         '''
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 

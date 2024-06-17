@@ -285,15 +285,22 @@ class Model(nn.Module):
                                   bias=False)
         else:
             return x_enc, x_mark_enc
+
         # B,T,C -> B,C,T
+        # nn.Conv1d 和 MaxPool1d, AvgPool1d 层的输入通常要求形状为 [B, C, T]
+        # 当数据形状为 [B, T, C] 时，直接应用一维卷积层或池化层会导致操作在错误的维度
+        # 上进行。为了确保卷积和池化操作在时间维度上进行，需要将数据的形状转换为 [B, C, T]。
         x_enc = x_enc.permute(0, 2, 1)
 
         x_enc_ori = x_enc
         x_mark_enc_mark_ori = x_mark_enc
 
+        # 初始化下采样结果列表
         x_enc_sampling_list = []
         x_mark_sampling_list = []
-        x_enc_sampling_list.append(x_enc.permute(0, 2, 1))
+
+        # x_enc_sampling_list 保存全部的采样数据，第一个数据就是原始数据的[B,T,C]形式
+        x_enc_sampling_list.append(x_enc.permute(0, 2, 1))  # 在这里是第二次permute, 回到了BTC.
         x_mark_sampling_list.append(x_mark_enc)
 
         for i in range(self.configs.down_sampling_layers):
@@ -313,6 +320,7 @@ class Model(nn.Module):
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
 
+        import ipdb; ipdb.set_trace()
         x_enc, x_mark_enc = self.__multi_scale_process_inputs(x_enc, x_mark_enc)
 
         x_list = []

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-import os
 import torch
 from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
 from exp.exp_imputation import Exp_Imputation
@@ -21,7 +20,7 @@ scale: 出现在data_loader.py中
         当 scale=True 时，数据将在读取后进行标准化或归一化处理。
         当 scale=False 时，数据将保持原始状态，不进行标准化或归一化处理。
 
-features 'M'
+features 'M', 'S', 'MS'
     M (多变量预测多变量)：是指使用多个变量来预测多个变量的结果。例如，您可能有多个股票的价格数据，并想要同时预测它们未来的价格走势。
     S (单变量预测单变量)：是指仅使用一个变量来预测该变量本身未来的值。例如，您可能只有某只股票的价格数据，并想要预测其未来的价格走势。
     MS (多变量预测单变量)：是指使用多个变量来预测单个变量的结果。例如，您可能有多个影响因素（例如，温度、湿度等）和某只股票的价格数据，并想要利用这些影响因素来预测股票未来价格走势。
@@ -163,7 +162,7 @@ if __name__ == '__main__':
     # args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
     args.use_gpu = True if torch.cuda.is_available() else False
 
-    print(torch.cuda.is_available())
+    print(f'GPU is available: {torch.cuda.is_available()}')
 
     if args.use_gpu and args.use_multi_gpu:
         args.devices = args.devices.replace(' ', '')

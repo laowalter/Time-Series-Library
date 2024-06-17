@@ -15,6 +15,19 @@ from utils.augmentation import run_augmentation_single
 
 warnings.filterwarnings('ignore')
 
+'''
+在 PyTorch 中，DataLoader 返回的数据集的顺序取决于数据集的格式和数据加载器的实现。
+DataLoader 本身并不改变数据的形状，它只是将数据从数据集提取出来并组织成批次（batch）。
+数据的形状和顺序通常由数据集(dataset)定义。
+
+对于时间序列数据或一维信号数据，常见的形状是 [batch_size, sequence_length, num_features]，
+即 [B, T, C]。然而，有时也可能使用 [B, C, T] 的形状，具体取决于模型和实现的需求。
+
+根据dataset读入数据判断是[B,T,C] 还是[B,C,T]?
+
+比如，从Dataset_Custom类的代码中，可以看出数据的形状是 [B, T, C]。这是因为在读取和处理数据时，
+并没有对数据的形状进行 permute 操作，保持了原始形状 [batch_size, sequence_length, num_features]。
+'''
 
 class Dataset_ETT_hour(Dataset):
     def __init__(self, args, root_path, flag='train', size=None,
@@ -84,7 +97,6 @@ class Dataset_ETT_hour(Dataset):
         self.data_x = data[border1:border2]
         self.data_y = data[border1:border2]
 
-        import ipdb; ipdb.set_trace()
         if self.set_type == 0 and self.args.augmentation_ratio > 0:
             self.data_x, self.data_y, augmentation_tags = run_augmentation_single(self.data_x, self.data_y, self.args)
 
@@ -279,7 +291,7 @@ class Dataset_Custom(Dataset):
             data = df_data.values
 
         '''
-        处理时间
+        单独处理时间
         '''
         df_stamp = df_raw[['date']][border1:border2]
         df_stamp['date'] = pd.to_datetime(df_stamp.date)

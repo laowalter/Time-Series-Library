@@ -30,6 +30,7 @@ class moving_avg(nn.Module):
 
     def forward(self, x):
         # padding on the both ends of time series
+        # front 和 end 对x 的前后填充是为例计算x的头和尾的avg之用
         front = x[:, 0:1, :].repeat(1, (self.kernel_size - 1) // 2, 1)
         end = x[:, -1:, :].repeat(1, (self.kernel_size - 1) // 2, 1)
         x = torch.cat([front, x, end], dim=1)
@@ -41,6 +42,11 @@ class moving_avg(nn.Module):
 class series_decomp(nn.Module):
     """
     Series decomposition block
+    移动平均（Moving Average）：通过移动平均滤波器计算的值被视为趋势（trend）。这是因
+            为移动平均通过平滑短期波动来揭示长期趋势。
+    残差（Residual）：原始数据减去移动平均值得到的部分被视为残差。这部分数据理论上应该
+            包含季节性成分和随机噪声。在许多应用中，残差主要被用来表示季节性，因为在去
+            除趋势之后，剩余的数据常常显示出周期性的波动。
     """
 
     def __init__(self, kernel_size):

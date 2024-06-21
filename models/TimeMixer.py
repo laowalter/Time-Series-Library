@@ -28,11 +28,33 @@ class DFT_series_decomp(nn.Module):
 class MultiScaleSeasonMixing(nn.Module):
     """
     Bottom-up mixing season pattern
+    input [B,C,T]
     """
 
     def __init__(self, configs):
         super(MultiScaleSeasonMixing, self).__init__()
-
+        '''
+        周期性数据合成从高密度到低密度
+        MultiScaleSeasonMixing(
+          (down_sampling_layers): ModuleList(
+            (0): Sequential(
+              (0): Linear(in_features=96, out_features=48, bias=True)
+              (1): GELU(approximate='none')
+              (2): Linear(in_features=48, out_features=48, bias=True)
+            )
+            (1): Sequential(
+              (0): Linear(in_features=48, out_features=24, bias=True)
+              (1): GELU(approximate='none')
+              (2): Linear(in_features=24, out_features=24, bias=True)
+            )
+            (2): Sequential(
+              (0): Linear(in_features=24, out_features=12, bias=True)
+              (1): GELU(approximate='none')
+              (2): Linear(in_features=12, out_features=12, bias=True)
+            )
+          )
+        )
+        '''
         self.down_sampling_layers = torch.nn.ModuleList(
             [
                 nn.Sequential(
@@ -54,10 +76,22 @@ class MultiScaleSeasonMixing(nn.Module):
     def forward(self, season_list):
 
         # mixing high->low
-        out_high = season_list[0]
-        out_low = season_list[1]
-        out_season_list = [out_high.permute(0, 2, 1)]
-
+        '''
+        season_list[0].shape => [2688, 16, 96]
+        season_list[1].shape => [2688, 16, 48]
+        season_list[2].shape => [2688, 16, 24]
+        season_list[3].shape => [2688, 16, 12]
+        '''
+        out_high = season_list[0]  # 初始化为最高分辨率
+        out_low = season_list[1]  # 次高分辨率的季节性模式
+        out_season_list = [out_high.permute(0, 2, 1)]  # [B,T,C] 把96的sesson直接放入
+        '''
+        通过逐层下采样处理，可以将时间序列数据从高分辨率逐步转换到低分辨率，从而在每个
+        层级上捕捉不同尺度的季节性特征。这种处理方式允许模型在不同时间尺度上识别和学习
+        这些周期性模式。
+        下面的循环就是高分辨率96降采样次分辨率48，然后和原来的次分辨率48结合成新的48，
+        然后将新的48作为高分辨率，在通过season_list[i+2]找到原来的24作为次高，重复前面。
+       '''
         for i in range(len(season_list) - 1):
             out_low_res = self.down_sampling_layers[i](out_high)
             out_low = out_low + out_low_res
@@ -76,6 +110,28 @@ class MultiScaleTrendMixing(nn.Module):
 
     def __init__(self, configs):
         super(MultiScaleTrendMixing, self).__init__()
+        '''
+        趋势和成有低密度到高密度
+        MultiScaleTrendMixing(
+          (up_sampling_layers): ModuleList(
+            (0): Sequential(
+              (0): Linear(in_features=12, out_features=24, bias=True)
+              (1): GELU(approximate='none')
+              (2): Linear(in_features=24, out_features=24, bias=True)
+            )
+            (1): Sequential(
+              (0): Linear(in_features=24, out_features=48, bias=True)
+              (1): GELU(approximate='none')
+              (2): Linear(in_features=48, out_features=48, bias=True)
+            )
+            (2): Sequential(
+              (0): Linear(in_features=48, out_features=96, bias=True)
+              (1): GELU(approximate='none')
+              (2): Linear(in_features=96, out_features=96, bias=True)
+            )
+          )
+        )
+        '''
 
         self.up_sampling_layers = torch.nn.ModuleList(
             [
@@ -115,6 +171,8 @@ class MultiScaleTrendMixing(nn.Module):
 
 
 class PastDecomposableMixing(nn.Module):
+    """对不同的数据进行趋势分解"""
+
     def __init__(self, configs):
         super(PastDecomposableMixing, self).__init__()
         self.seq_len = configs.seq_len
@@ -145,6 +203,13 @@ class PastDecomposableMixing(nn.Module):
         # Mxing trend
         self.mixing_multi_scale_trend = MultiScaleTrendMixing(configs)
 
+        '''
+        Sequential(
+          (0): Linear(in_features=16, out_features=32, bias=True)
+          (1): GELU(approximate='none')
+          (2): Linear(in_features=32, out_features=16, bias=True)
+        )
+        '''
         self.out_cross_layer = nn.Sequential(
             nn.Linear(in_features=configs.d_model, out_features=configs.d_ff),
             nn.GELU(),
@@ -152,26 +217,30 @@ class PastDecomposableMixing(nn.Module):
         )
 
     def forward(self, x_list):
+        # x_list[0].shape: [2688,96,16] 即B,T.C
+
         length_list = []
-        for x in x_list:
+        for x in x_list:  # 取出全部的sequence长度(T)  length_list[96,48,24,12] High->Low
             _, T, _ = x.size()
             length_list.append(T)
 
         # Decompose to obtain the season and trend
+        # 每一个list都是保存从时间频率从high到low的数据, 数据顺序是B,C,T
         season_list = []
         trend_list = []
         for x in x_list:
             season, trend = self.decompsition(x)
             if self.channel_independence == 0:
-                season = self.cross_layer(season)
-                trend = self.cross_layer(trend)
-            season_list.append(season.permute(0, 2, 1))
-            trend_list.append(trend.permute(0, 2, 1))
+                season = self.cross_layer(season)  # B,T,C
+                trend = self.cross_layer(trend)  # B,T,C
+
+            season_list.append(season.permute(0, 2, 1))  # B,C,T
+            trend_list.append(trend.permute(0, 2, 1))  # B,C,T
 
         # bottom-up season mixing
-        out_season_list = self.mixing_multi_scale_season(season_list)
+        out_season_list = self.mixing_multi_scale_season(season_list)  # [B,T,C]
         # top-down trend mixing
-        out_trend_list = self.mixing_multi_scale_trend(trend_list)
+        out_trend_list = self.mixing_multi_scale_trend(trend_list)  # [B, T, C]
 
         out_list = []
         for ori, out_season, out_trend, length in zip(x_list, out_season_list, out_trend_list,
@@ -201,14 +270,30 @@ class Model(nn.Module):
         self.enc_in = configs.enc_in
 
         if self.channel_independence == 1:
-            self.enc_embedding = DataEmbedding_wo_pos(1, configs.d_model, configs.embed, configs.freq,
+            # 如果通道独立，那么每一个通道（特征）都分别编码
+            self.enc_embedding = DataEmbedding_wo_pos(1,
+                                                      configs.d_model,
+                                                      configs.embed,
+                                                      configs.freq,
                                                       configs.dropout)
         else:
-            self.enc_embedding = DataEmbedding_wo_pos(configs.enc_in, configs.d_model, configs.embed, configs.freq,
+            # 通道不独立，所有通道（特征）一起作为输入
+            self.enc_embedding = DataEmbedding_wo_pos(configs.enc_in,
+                                                      configs.d_model,
+                                                      configs.embed,
+                                                      configs.freq,
                                                       configs.dropout)
 
         self.layer = configs.e_layers
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
+            '''
+            ModuleList(
+              (0): Linear(in_features=96, out_features=96, bias=True)
+              (1): Linear(in_features=48, out_features=96, bias=True)
+              (2): Linear(in_features=24, out_features=96, bias=True)
+              (3): Linear(in_features=12, out_features=96, bias=True)
+            )
+            '''
             self.predict_layers = torch.nn.ModuleList(
                 [
                     torch.nn.Linear(
@@ -220,12 +305,9 @@ class Model(nn.Module):
             )
 
             if self.channel_independence == 1:
-                self.projection_layer = nn.Linear(
-                    configs.d_model, 1, bias=True)
+                self.projection_layer = nn.Linear(configs.d_model, 1, bias=True)
             else:
-                self.projection_layer = nn.Linear(
-                    configs.d_model, configs.c_out, bias=True)
-
+                self.projection_layer = nn.Linear(configs.d_model, configs.c_out, bias=True)
                 self.out_res_layers = torch.nn.ModuleList([
                     torch.nn.Linear(
                         configs.seq_len // (configs.down_sampling_window ** i),
@@ -273,12 +355,14 @@ class Model(nn.Module):
 
     def __multi_scale_process_inputs(self, x_enc, x_mark_enc):
         if self.configs.down_sampling_method == 'max':
-            down_pool = torch.nn.MaxPool1d(self.configs.down_sampling_window, return_indices=False)
+            down_pool = torch.nn.MaxPool1d(self.configs.down_sampling_window,
+                                           return_indices=False)
         elif self.configs.down_sampling_method == 'avg':
             down_pool = torch.nn.AvgPool1d(self.configs.down_sampling_window)
         elif self.configs.down_sampling_method == 'conv':
             padding = 1 if torch.__version__ >= '1.5.0' else 2
-            down_pool = nn.Conv1d(in_channels=self.configs.enc_in, out_channels=self.configs.enc_in,
+            down_pool = nn.Conv1d(in_channels=self.configs.enc_in,
+                                  out_channels=self.configs.enc_in,
                                   kernel_size=3, padding=padding,
                                   stride=self.configs.down_sampling_window,
                                   padding_mode='circular',
@@ -304,9 +388,8 @@ class Model(nn.Module):
         x_mark_sampling_list.append(x_mark_enc)
 
         for i in range(self.configs.down_sampling_layers):
-            x_enc_sampling = down_pool(x_enc_ori)
-
-            x_enc_sampling_list.append(x_enc_sampling.permute(0, 2, 1))
+            x_enc_sampling = down_pool(x_enc_ori)  # B,C.T
+            x_enc_sampling_list.append(x_enc_sampling.permute(0, 2, 1))  # B,T,C
             x_enc_ori = x_enc_sampling
 
             if x_mark_enc is not None:
@@ -319,10 +402,18 @@ class Model(nn.Module):
         return x_enc, x_mark_enc
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
-
-        import ipdb; ipdb.set_trace()
+        """
+        处理多尺度输入。__multi_scale_process_inputs
+        归一化输入数据。__normalize_layers
+        嵌入处理后的输入数据。
+        使用编码器块处理嵌入数据。
+        使用解码器块生成预测。
+        将预测结果反归一化，得到最终输出。
+        """
+        # 生成多尺度 x_enc、x_mark_enc是不同尺度tensor组成的list
         x_enc, x_mark_enc = self.__multi_scale_process_inputs(x_enc, x_mark_enc)
 
+        # 归一化输入数据。
         x_list = []
         x_mark_list = []
         if x_mark_enc is not None:
@@ -332,7 +423,7 @@ class Model(nn.Module):
                 if self.channel_independence == 1:
                     x = x.permute(0, 2, 1).contiguous().reshape(B * N, T, 1)
                 x_list.append(x)
-                x_mark = x_mark.repeat(N, 1, 1)
+                x_mark = x_mark.repeat(N, 1, 1)  # repeat N times of B position = N*B
                 x_mark_list.append(x_mark)
         else:
             for i, x in zip(range(len(x_enc)), x_enc, ):
@@ -347,21 +438,24 @@ class Model(nn.Module):
         x_list = self.pre_enc(x_list)
         if x_mark_enc is not None:
             for i, x, x_mark in zip(range(len(x_list[0])), x_list[0], x_mark_list):
-                enc_out = self.enc_embedding(x, x_mark)  # [B,T,C]
+                # x.shape (B*N, T, 1), x_mark.shpae (B*N, T, 4)
+                enc_out = self.enc_embedding(x, x_mark)
                 enc_out_list.append(enc_out)
         else:
             for i, x in zip(range(len(x_list[0])), x_list[0]):
                 enc_out = self.enc_embedding(x, None)  # [B,T,C]
                 enc_out_list.append(enc_out)
 
+        '''
+        这是将趋势项和季节项合成的过程, 最终enc_out_list的元素shape和x_list一样。B,T,C
+        '''
         # Past Decomposable Mixing as encoder for past
         for i in range(self.layer):
             enc_out_list = self.pdm_blocks[i](enc_out_list)
 
         # Future Multipredictor Mixing as decoder for future
-        dec_out_list = self.future_multi_mixing(B, enc_out_list, x_list)
-
-        dec_out = torch.stack(dec_out_list, dim=-1).sum(-1)
+        dec_out_list = self.future_multi_mixing(B, enc_out_list, x_list)  # all element [128,96,21]
+        dec_out = torch.stack(dec_out_list, dim=-1).sum(-1)  # [128,96,21]
         dec_out = self.normalize_layers[0](dec_out, 'denorm')
         return dec_out
 
@@ -372,9 +466,9 @@ class Model(nn.Module):
             for i, enc_out in zip(range(len(x_list)), enc_out_list):
                 dec_out = self.predict_layers[i](enc_out.permute(0, 2, 1)).permute(
                     0, 2, 1)  # align temporal dimension
-                dec_out = self.projection_layer(dec_out)
-                dec_out = dec_out.reshape(B, self.configs.c_out, self.pred_len).permute(0, 2, 1).contiguous()
-                dec_out_list.append(dec_out)
+                dec_out = self.projection_layer(dec_out)  # [2688, 96, 1]
+                dec_out = dec_out.reshape(B, self.configs.c_out, self.pred_len).permute(0, 2, 1).contiguous()  # [128, 96, 21]
+                dec_out_list.append(dec_out)  # dec_out [128,96,1]
 
         else:
             for i, enc_out, out_res in zip(range(len(x_list[0])), enc_out_list, x_list[1]):

@@ -34,6 +34,19 @@ augmentation_ratio
         --augmentation_ratio 0 表示不进行数据增强。
         --augmentation_ratio 1 表示每个样本进行一次增强。
         --augmentation_ratio N 表示每个样本进行 N 次增强。
+
+d_model 并不是模型的输出，而是模型中每一层的特征向量的维度。具体来说，在 Transformer 和许多其他深度学习模型中，d_model 表示的是输入、输出或者中间层表示的向量维度。
+详细解释
+    在Transformer模型中：
+        d_model 通常指的是输入到每一层（包括编码器和解码器）的嵌入向量的维度。
+        例如，在编码器中，每个输入序列元素都会被嵌入到一个 d_model 维度的向量中，然后通过多头自注意力机制和前馈神经网络进行处理。
+        在解码器中，同样的，每个输出序列元素也会被嵌入到一个 d_model 维度的向量中进行处理。
+
+    在卷积神经网络（CNN）中：
+        如果使用卷积操作，比如 TokenEmbedding 中的 nn.Conv1d，d_model 可能指的是卷积层的输出通道数。
+
+    在其他深度学习模型中：
+        d_model 可能代表任意一层的输出特征维度，不仅限于Transformer。
 '''
 if __name__ == '__main__':
     fix_seed = 2021

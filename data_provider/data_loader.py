@@ -255,8 +255,9 @@ class Dataset_Custom(Dataset):
         '''
         df_raw.columns: ['date', ...(other features), target feature]
         '''
-        cols = list(df_raw.columns)
-        cols.remove(self.target)
+        # 強制數據順序，將時間放到的第一個，OT放到最後
+        cols = df_raw.columns.tolist()
+        cols.remove(self.target)  # self.target=target='OT'
         cols.remove('date')
         df_raw = df_raw[['date'] + cols + [self.target]]
 
@@ -277,13 +278,13 @@ class Dataset_Custom(Dataset):
         border1 = border1s[self.set_type]  # line224, setup border1 to training start
         border2 = border2s[self.set_type]  # setup border2 to training end
 
-        if self.features == 'M' or self.features == 'MS' or self.features == 'MM':
+        if self.features == 'M' or self.features == 'MS' or self.features.startswith('MM'):
             cols_data = df_raw.columns[1:]
             df_data = df_raw[cols_data]
         elif self.features == 'S':  # self.target=target='OT'
             df_data = df_raw[[self.target]]
         else:
-            print("Error: Feature must be one of 'M', 'MS', 'S', or 'MM'.")
+            print("Error: Feature must be one of 'M', 'MS', 'S', or starts with 'MM', like MM-1,3.")
             sys.exit(1)  # Exit the program with a non-zero status code
 
         if self.scale:
@@ -322,16 +323,11 @@ class Dataset_Custom(Dataset):
         return
 
     def __getitem__(self, index):
-
-
-<< << << < Updated upstream
         '''作为一个dataset的子类需要iterate功能'''
-== == == =
         """
         pred數據作為target
         處理方式利用s_begin, s_end, r_begin, r_end
         """
->>>>>> > Stashed changes
         s_begin = index
         s_end = s_begin + self.seq_len
         r_begin = s_end - self.label_len

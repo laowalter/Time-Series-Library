@@ -134,15 +134,30 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     if self.args.output_attention:
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                     else:
-                        import ipdb; ipdb.set_trace()
                         '''
                         进入模型计算
                         '''
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
-                    f_dim = -1 if self.args.features == 'MS' else 0
-                    outputs = outputs[:, -self.args.pred_len:, f_dim:]
-                    batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
+                    '''
+                    - 如果預測的是MS, 則就是預測OT, 就是取得最後一列，
+                        outputs和batch_y都是取得最後一列，對比算loss
+                    - 如果預測是M, outputs和batch_y都是所有數列的對比算loss;
+                    - 如果預測是S, outputs和batch_y都只有一列，也是所有數列對比。
+                    '''
+                    # f_dim = -1 if self.args.features == 'MS' else 0
+
+                    # import ipdb; ipdb.set_trace()
+                    if self.args.features == 'MS':
+                        f_dim = slice(-1, None)
+                    elif self.args.features == 'S' or self.args.features == 'M':
+                        f_dim = slice(0, None)
+                    elif self.args.features.startswith('MM'):
+                        numbers = self.args.features[3:].split(',')
+                        f_dim = [int(num) for num in numbers]
+
+                    outputs = outputs[:, -self.args.pred_len:, f_dim]
+                    batch_y = batch_y[:, -self.args.pred_len:, f_dim].to(self.device)
                     loss = criterion(outputs, batch_y)
                     train_loss.append(loss.item())
 

@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import pandas as pd
 import glob
@@ -276,12 +277,14 @@ class Dataset_Custom(Dataset):
         border1 = border1s[self.set_type]  # line224, setup border1 to training start
         border2 = border2s[self.set_type]  # setup border2 to training end
 
-        if self.features == 'M' or self.features == 'MS':
-            # M (多变量预测多变量) S (单变量预测单变量) MS (多变量预测单变量)
-            cols_data = df_raw.columns[1:]  # 去掉数据集中date的字段
+        if self.features == 'M' or self.features == 'MS' or self.features == 'MM':
+            cols_data = df_raw.columns[1:]
             df_data = df_raw[cols_data]
         elif self.features == 'S':  # self.target=target='OT'
             df_data = df_raw[[self.target]]
+        else:
+            print("Error: Feature must be one of 'M', 'MS', 'S', or 'MM'.")
+            sys.exit(1)  # Exit the program with a non-zero status code
 
         if self.scale:
             train_data = df_data[border1s[0]:border2s[0]]
@@ -319,12 +322,20 @@ class Dataset_Custom(Dataset):
         return
 
     def __getitem__(self, index):
+
+
+<< << << < Updated upstream
         '''作为一个dataset的子类需要iterate功能'''
+== == == =
+        """
+        pred數據作為target
+        處理方式利用s_begin, s_end, r_begin, r_end
+        """
+>>>>>> > Stashed changes
         s_begin = index
         s_end = s_begin + self.seq_len
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
-
         seq_x = self.data_x[s_begin:s_end]
         seq_y = self.data_y[r_begin:r_end]
         seq_x_mark = self.data_stamp[s_begin:s_end]

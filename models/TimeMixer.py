@@ -81,17 +81,19 @@ class MultiScaleSeasonMixing(nn.Module):
         season_list[1].shape => [2688, 16, 48]
         season_list[2].shape => [2688, 16, 24]
         season_list[3].shape => [2688, 16, 12]
-        '''
         out_high = season_list[0]  # 初始化为最高分辨率
         out_low = season_list[1]  # 次高分辨率的季节性模式
         out_season_list = [out_high.permute(0, 2, 1)]  # [B,T,C] 把96的sesson直接放入
-        '''
         通过逐层下采样处理，可以将时间序列数据从高分辨率逐步转换到低分辨率，从而在每个
         层级上捕捉不同尺度的季节性特征。这种处理方式允许模型在不同时间尺度上识别和学习
         这些周期性模式。
         下面的循环就是高分辨率96降采样次分辨率48，然后和原来的次分辨率48结合成新的48，
         然后将新的48作为高分辨率，在通过season_list[i+2]找到原来的24作为次高，重复前面。
-       '''
+        '''
+        out_high = season_list[0]
+        out_low = season_list[1]
+        out_season_list = [out_high.permute(0, 2, 1)]
+
         for i in range(len(season_list) - 1):
             out_low_res = self.down_sampling_layers[i](out_high)
             out_low = out_low + out_low_res

@@ -167,19 +167,28 @@ if __name__ == '__main__':
 
     exp = Exp(args)  # set experiments, select model
 
-    total_params = sum(p.numel() for p in exp.model.parameters())
+    total_params = 0
+    non_zero_params = 0
+    
+    for param in exp.model.parameters():
+        total_params += param.numel()
+        non_zero_params += param.ne(0).sum().item()
+    
     print(exp.model)
     print(f'Total number of parameters: {total_params}')
-    import ipdb; ipdb.set_trace()
+    print(f"Non-zero parameters: {non_zero_params}, about {non_zero_params / total_params:.2f}%")
+    print(f'Training {args.data_path}')
     
-    path = os.path.join(args.checkpoints, setting)
+    path = args.checkpoints
     if not os.path.exists(path):
         os.makedirs(path)
-    elif os.path.exists(f'{path}/checkpoint.pth'):
-        checkpoint = torch.load(f'{path}/checkpoint.pth')
-        # load save trained model state dict
+
+    # saved trained model state dict
+    path = f'{path}/checkpoint.pth'
+    if os.path.exists(path):
+        checkpoint = torch.load(path)
         exp.model.load_state_dict(checkpoint)
-        print(f'Found preivious saved model, loaded.')
+        print(f'Found preivious saved model {path}, loaded.')
     else:
         print(f'No previous saved model, create a new one.')
 

@@ -20,6 +20,9 @@ data_dict = {
 
 
 def data_provider(args, flag):
+    """
+    返回的是data_set和data_loader
+    """
     Data = data_dict[args.data]
     timeenc = 0 if args.embed != 'timeF' else 1
 
@@ -76,6 +79,7 @@ def data_provider(args, flag):
             freq=freq,
             seasonal_patterns=args.seasonal_patterns
         )
+
         print(flag, len(data_set))
         data_loader = DataLoader(
             data_set,

@@ -21,6 +21,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
     def _build_model(self):
         model = self.model_dict[self.args.model].Model(self.args).float()
+
         if self.args.use_multi_gpu and self.args.use_gpu:
             model = nn.DataParallel(model, device_ids=self.args.device_ids)
         return model
@@ -147,6 +148,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     '''
                     # f_dim = -1 if self.args.features == 'MS' else 0
 
+                    # import ipdb; ipdb.set_trace()
                     if self.args.features == 'MS':
                         f_dim = slice(-1, None)
                     elif self.args.features == 'S' or self.args.features == 'M':
@@ -183,7 +185,6 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
                 epoch + 1, train_steps, train_loss, vali_loss, test_loss))
-
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
@@ -243,13 +244,11 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 '''
                 反算真實值
                 '''
+                import ipdb; ipdb.set_trace()
                 if test_data.scale and self.args.inverse:
                     shape = outputs.shape
-                    # Orginal bug has bug.
-                    # outputs = test_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
-                    # batch_y = test_data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
-                    outputs = test_data.inverse_transform(outputs.reshape(-1, shape[-1])).reshape(shape)
-                    batch_y = test_data.inverse_transform(batch_y.reshape(-1, shape[-1])).reshape(shape)
+                    outputs = test_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
+                    batch_y = test_data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
 
                 outputs = outputs[:, :, f_dim:]
                 batch_y = batch_y[:, :, f_dim:]
@@ -267,7 +266,6 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
                     pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
                     visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
-                    print(f'Created {os.path.join(folder_path, str(i) + ".pdf")} ')
 
         preds = np.array(preds)
         trues = np.array(trues)
@@ -284,8 +282,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         # dtw calculation
         if self.args.use_dtw:
             dtw_list = []
-            
-            manhattan_distance = lambda x, y: np.abs(x - y)
+            def manhattan_distance(x, y): return np.abs(x - y)
             for i in range(preds.shape[0]):
                 x = preds[i].reshape(-1, 1)
                 y = trues[i].reshape(-1, 1)

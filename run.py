@@ -204,6 +204,7 @@ if __name__ == '__main__':
     if args.is_training:
         for ii in range(args.itr):
             # setting record of experiments
+            # import ipdb; ipdb.set_trace()
             exp = Exp(args)  # set experiments
             setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_expand{}_dc{}_fc{}_eb{}_dt{}_{}_{}'.format(
                 args.task_name,
@@ -227,8 +228,20 @@ if __name__ == '__main__':
                 args.des, ii)
 
             print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
-            exp.train(setting)
+            # import ipdb; ipdb.set_trace()
+            
+            # path = os.path.join(self.args.checkpoints, setting)
+            # if not os.path.exists(path):
+            #     os.makedirs(path)
+            # elif os.path.exists(f'{path}/checkpoint.pth'):
+            #     checkpoint = torch.load(f'{path}/checkpoint.pth')
+            #     self.model.load_state_dict(checkpoint)
+            #     print(f'Found preivious saved state_dict, loaded.')
+            # else:
+            #     print(f'No previous saved model, reate a new one.')
 
+            import ipdb; ipdb.set_trace()
+            exp.train(setting)
             print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
             exp.test(setting)
             torch.cuda.empty_cache()

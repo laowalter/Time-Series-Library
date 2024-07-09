@@ -286,8 +286,9 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         # dtw calculation
         if self.args.use_dtw:
             dtw_list = []
-            
-            manhattan_distance = lambda x, y: np.abs(x - y)
+
+            def manhattan_distance(x, y): return np.abs(x - y)
+
             for i in range(preds.shape[0]):
                 x = preds[i].reshape(-1, 1)
                 y = trues[i].reshape(-1, 1)

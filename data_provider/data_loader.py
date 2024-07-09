@@ -219,6 +219,12 @@ class Dataset_ETT_minute(Dataset):
 
 
 class Dataset_Custom(Dataset):
+    """
+    iterate 返回 seq_x, seq_y, seq_x_mark, seq_y_mark 
+        - 返回的是numpy array
+        - 如果是scale=1，就是归一化的数据
+        - seq_x_mark 是时间数据
+    """
     def __init__(self, args, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
                  target='OT', scale=True, timeenc=0, freq='h', seasonal_patterns=None):
@@ -246,7 +252,7 @@ class Dataset_Custom(Dataset):
 
         self.root_path = root_path
         self.data_path = data_path
-        self.__read_data__()
+        self.__read_data__(real_time_df)
 
     def __read_data__(self):
         self.scaler = StandardScaler()
@@ -284,7 +290,7 @@ class Dataset_Custom(Dataset):
         elif self.features == 'S':  # self.target=target='OT'
             df_data = df_raw[[self.target]]
         else:
-            print("Error: Feature must be one of 'M', 'MS', 'S', or starts with 'MM', like MM-1,3.")
+            print("Error: Feature must be one of 'M', 'MS', 'S', or starts with 'MM'.")
             sys.exit(1)  # Exit the program with a non-zero status code
 
         if self.scale:
@@ -300,14 +306,28 @@ class Dataset_Custom(Dataset):
         df_stamp = df_raw[['date']][border1:border2]
         df_stamp['date'] = pd.to_datetime(df_stamp.date)
         if self.timeenc == 0:
+            """
+            data_stamp生成如下形式:
+                                 date  month  day  weekday  hour
+            62144 2022-05-13 21:39:00      5   13        4    21
+            62145 2022-05-13 21:42:00      5   13        4    21
+            """
             df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
             df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
             df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
             df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
             data_stamp = df_stamp.drop(['date'], 1).values
         elif self.timeenc == 1:
+            """
+            data_stamp生成如下形式:
+            array([[ 0.16101695,  0.41304348,  0.16666667, -0.1       , -0.13835616],
+                   ...,
+                   [ 0.16101695, -0.06521739, -0.33333333, -0.1       ,  0.44794521]])
+            data_stamp.shape (16496, 5) 
+            """
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
+
 
         self.data_x = data[border1:border2]
         self.data_y = data[border1:border2]

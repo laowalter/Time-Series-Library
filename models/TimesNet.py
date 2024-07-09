@@ -134,7 +134,6 @@ class Model(nn.Module):
         x_enc /= stdev
 
         # Embedding
-        import ipdb; ipdb.set_trace()
         enc_out = self.enc_embedding(x_enc, x_mark_enc)  # [B,T,C]
         enc_out = self.predict_linear(enc_out.permute(0, 2, 1)).permute(0, 2, 1)  # align temporal dimension
 

@@ -220,11 +220,12 @@ class Dataset_ETT_minute(Dataset):
 
 class Dataset_Custom(Dataset):
     """
-    iterate 返回 seq_x, seq_y, seq_x_mark, seq_y_mark 
+    iterate 返回 seq_x, seq_y, seq_x_mark, seq_y_mark
         - 返回的是numpy array
         - 如果是scale=1，就是归一化的数据
         - seq_x_mark 是时间数据
     """
+
     def __init__(self, args, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
                  target='OT', scale=True, timeenc=0, freq='h', seasonal_patterns=None):
@@ -252,7 +253,7 @@ class Dataset_Custom(Dataset):
 
         self.root_path = root_path
         self.data_path = data_path
-        self.__read_data__(real_time_df)
+        self.__read_data__()
 
     def __read_data__(self):
         self.scaler = StandardScaler()
@@ -272,13 +273,10 @@ class Dataset_Custom(Dataset):
         num_vali = len(df_raw) - num_train - num_test
 
         '''
-        border1s [训练集的起始位置，验证集的起始位置,测试集的起始位置]
-        border1s [训练集的结束位置，验证集的结束位置,测试集的结束位置]
+        |------------------------------len(df_raw)-----------------------------------|
+        |---------------0.7(train)-------------|------0.1(vali)-------|---0.2(test)--|
+        |------------------num_train-----------|-------num_vali-------|---num_test---|
         '''
-        # 下面代码中 -self.seq_len 模型需要一个长度为 self.seq_len 的输入序列来进行预测。
-        # 如果验证集的起点是 num_train，那么第一个验证样本将无法获得完整的输入序列。
-        # 通过将验证集的起点设为 num_train - self.seq_len，确保了验证集中的第一个样本可
-        # 以有一个完整的输入序列。
         border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
         border2s = [num_train, num_train + num_vali, len(df_raw)]
         border1 = border1s[self.set_type]  # line224, setup border1 to training start
@@ -289,16 +287,18 @@ class Dataset_Custom(Dataset):
             df_data = df_raw[cols_data]
         elif self.features == 'S':  # self.target=target='OT'
             df_data = df_raw[[self.target]]
-        else:
-            print("Error: Feature must be one of 'M', 'MS', 'S', or starts with 'MM'.")
-            sys.exit(1)  # Exit the program with a non-zero status code
 
+        """
+        难道只有train要归一吗？vali，test 是不是都要归一
+        """
         if self.scale:
-            train_data = df_data[border1s[0]:border2s[0]]
-            self.scaler.fit(train_data.values)
-            data = self.scaler.transform(df_data.values)
+            data = df_data[border1:border2]
+            self.scaler.fit(data.values)
+            data = self.scaler.transform(data.values)  # walter modified
+            # data = self.scaler.transform(df_data.values) origin ver.
         else:
-            data = df_data.values
+            data = df_data[border1:border2].values  # walter modifed
+            # data = df_data.values
 
         '''
         单独处理时间
@@ -323,14 +323,15 @@ class Dataset_Custom(Dataset):
             array([[ 0.16101695,  0.41304348,  0.16666667, -0.1       , -0.13835616],
                    ...,
                    [ 0.16101695, -0.06521739, -0.33333333, -0.1       ,  0.44794521]])
-            data_stamp.shape (16496, 5) 
+            data_stamp.shape (16496, 5)
             """
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
 
-
-        self.data_x = data[border1:border2]
-        self.data_y = data[border1:border2]
+        # self.data_x = data[border1:border2]
+        # self.data_y = data[border1:border2]
+        self.data_x = data
+        self.data_y = data
 
         '''see run.py for explain augmentation_ratio'''
         if self.set_type == 0 and self.args.augmentation_ratio > 0:

@@ -192,10 +192,11 @@ if __name__ == '__main__':
     else:
         print(f'No previous saved model, create a new one.')
 
-    print(f'Starting {args.task_name} training' if args.is_training else f'Starting {args.task_name} testing')
     if args.is_training:
+        print(f'Starting {args.task_name} training...')
         exp.train(setting)
     else:
+        print(f'Starting {args.task_name} testing')
         exp.test(setting)
 
     torch.cuda.empty_cache()

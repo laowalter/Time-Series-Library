@@ -1,11 +1,10 @@
 import os
-import sys
 import numpy as np
 import pandas as pd
 import glob
 import re
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from sklearn.preprocessing import StandardScaler
 from utils.timefeatures import time_features
 from data_provider.m4 import M4Dataset, M4Meta
@@ -328,10 +327,10 @@ class Dataset_Custom(Dataset):
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
 
-        # self.data_x = data[border1:border2]
+        # self.data_x = data[border1:border2]  # origin ver
         # self.data_y = data[border1:border2]
-        self.data_x = data
-        self.data_y = data
+        self.data_x = data  # walter modified.
+        self.data_y = data  # walter modified.
 
         '''see run.py for explain augmentation_ratio'''
         if self.set_type == 0 and self.args.augmentation_ratio > 0:

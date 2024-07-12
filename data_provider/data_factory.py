@@ -77,6 +77,7 @@ def data_provider(args, flag):
             target=args.target,
             timeenc=timeenc,
             freq=freq,
+            scale=args.scaling,
             seasonal_patterns=args.seasonal_patterns
         )
 

@@ -9,7 +9,7 @@ import os
 import time
 import warnings
 import numpy as np
-from utils.dtw_metric import dtw, accelerated_dtw
+from utils.dtw_metric import accelerated_dtw
 from utils.augmentation import run_augmentation, run_augmentation_single
 
 warnings.filterwarnings('ignore')
@@ -296,7 +296,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     print("calculating dtw iter:", i)
                 d, _, _, _ = accelerated_dtw(x, y, dist=manhattan_distance)
                 dtw_list.append(d)
-            dtw = np.array(dtw_list).mean()
+
+            dtw = np.array(dtw_list).mean()  # modified. removed imported dtw
         else:
             dtw = -999
 

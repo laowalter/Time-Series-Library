@@ -103,6 +103,7 @@ class Dataset_ETT_hour(Dataset):
         self.data_stamp = data_stamp
 
     def __getitem__(self, index):
+
         s_begin = index
         s_end = s_begin + self.seq_len
         r_begin = s_end - self.label_len
@@ -169,6 +170,7 @@ class Dataset_ETT_minute(Dataset):
             df_data = df_raw[[self.target]]
 
         if self.scale:
+            # 这里仅是利用train数据做一次归一化，用到全体数据上，防止数据泄漏，提高泛化能力
             train_data = df_data[border1s[0]:border2s[0]]
             self.scaler.fit(train_data.values)
             data = self.scaler.transform(df_data.values)
@@ -287,17 +289,13 @@ class Dataset_Custom(Dataset):
         elif self.features == 'S':  # self.target=target='OT'
             df_data = df_raw[[self.target]]
 
-        """
-        难道只有train要归一吗？vali，test 是不是都要归一
-        """
         if self.scale:
-            data = df_data[border1:border2]
-            self.scaler.fit(data.values)
-            data = self.scaler.transform(data.values)  # walter modified
-            # data = self.scaler.transform(df_data.values) origin ver.
+            # 用train_data的归一化fit数据来处理所有vali,test数据
+            train_data = df_data[border1s[0]:border2s[0]]
+            self.scaler.fit(train_data.values)
+            data = self.scaler.transform(df_data.values)
         else:
-            data = df_data[border1:border2].values  # walter modifed
-            # data = df_data.values
+            data = df_data.values
 
         '''
         单独处理时间
@@ -327,10 +325,8 @@ class Dataset_Custom(Dataset):
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
 
-        # self.data_x = data[border1:border2]  # origin ver
-        # self.data_y = data[border1:border2]
-        self.data_x = data  # walter modified.
-        self.data_y = data  # walter modified.
+        self.data_x = data[border1:border2]
+        self.data_y = data[border1:border2]
 
         '''see run.py for explain augmentation_ratio'''
         if self.set_type == 0 and self.args.augmentation_ratio > 0:

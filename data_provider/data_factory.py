@@ -1,7 +1,8 @@
 from data_provider.data_loader import Dataset_ETT_hour, Dataset_ETT_minute, Dataset_Custom, Dataset_M4, PSMSegLoader, \
-    MSLSegLoader, SMAPSegLoader, SMDSegLoader, SWATSegLoader, UEAloader
+    MSLSegLoader, SMAPSegLoader, SMDSegLoader, SWATSegLoader, UEAloader, custom_collate_fn
 from data_provider.uea import collate_fn
 from torch.utils.data import DataLoader
+from functools import partial
 
 data_dict = {
     'ETTh1': Dataset_ETT_hour,
@@ -85,7 +86,7 @@ def data_provider(args, flag):
         data_loader = DataLoader(
             data_set,
             batch_size=batch_size,
-            shuffle=shuffle_flag,
+            collate_fn=partial(custom_collate_fn, data_set.features),
             num_workers=args.num_workers,
             drop_last=drop_last)
 

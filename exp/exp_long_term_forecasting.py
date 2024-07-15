@@ -105,6 +105,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             epoch_time = time.time()
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 # batch_x_mark, batch_y_mark是self.data_timestamp时间戳
+                # batch_x.shape(128,768,26) batch_y.shpae(128,96,26)
                 iter_count += 1
                 model_optim.zero_grad()
                 batch_x = batch_x.float().to(self.device)
@@ -148,6 +149,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     # f_dim = -1 if self.args.features == 'MS' else 0
 
                     if self.args.features == 'MS':
+                        import ipdb; ipdb.set_trace()
                         f_dim = slice(-1, None)
                     elif self.args.features == 'S' or self.args.features == 'M':
                         f_dim = slice(0, None)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 export CUDA_VISIBLE_DEVICES=0
 
-root_path="~/work/strategies/ai/data/csv_data/"
+root_path="$HOME/work/strategies/ai/data/csv_data/"
 # data_path="y888_31m_2020-01-06 14:42:00_to_2022-12-13 10:39:00.csv"
 # data_path="y888_31m_2010-01-07 14:57:00_to_2022-12-13 10:39:00.csv"
 data_path="m888_31m_2010-01-07 14:57:00_to_2022-12-13 11:27:00.csv"
@@ -18,7 +18,7 @@ python -u run_walter_.py \
   --task_name long_term_forecast \
   --is_training 1 \
   --batch_size 128 \
-  --root_path $root_path \
+  --root_path "$root_path" \
   --data_path "$data_path" \
   --model_id Exchange_walter_data \
   --model $model_name \
@@ -28,9 +28,9 @@ python -u run_walter_.py \
   --inverse \
   --seq_len $seq_len \
   --label_len $label_len \
-  --pred_len $pred_len\
-  --e_layers 2 \
-  --d_layers 1 \
+  --pred_len $pred_len \
+  --e_layers $e_layers \
+  --d_layers $d_layers \
   --factor 3 \
   --enc_in 26 \
   --dec_in 26 \
@@ -39,4 +39,4 @@ python -u run_walter_.py \
   --d_ff 64 \
   --top_k 5 \
   --des 'Exp' \
-  --itr 1
+  --itr 1 # t means minutes \
